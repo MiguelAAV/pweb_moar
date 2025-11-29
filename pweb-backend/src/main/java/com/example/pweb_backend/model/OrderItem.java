@@ -1,5 +1,6 @@
 package com.example.pweb_backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,8 +18,8 @@ public class OrderItem {
     private Integer precioUnitario;
     private Integer subtotal;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "order_id")
     private Order order;
 }
-
