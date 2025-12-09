@@ -20,5 +20,9 @@ public class Product {
 
     private Integer precio; // en CLP
     private Integer stock;
+
+    // NUEVO CAMPO: URL de la imagen
+    private String imageUrl;
 }
+
 
