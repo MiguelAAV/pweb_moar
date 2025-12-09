@@ -23,6 +23,9 @@ public class Product {
 
     // NUEVO CAMPO: URL de la imagen
     private String imageUrl;
+
+    // NUEVO CAMPO Valores esperados: "LIBERADO" o "NO LIBERADO"
+    private String liberado;
 }
 
 
