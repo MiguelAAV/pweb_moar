@@ -80,10 +80,38 @@ public class AdminUserController {
             return ResponseEntity.notFound().build();
         }
 
+        // Validación mínima
+        if (req.getNombre() == null || req.getApellido() == null) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("message", "Nombre y apellido son obligatorios")
+            );
+        }
+
         // Actualizar campos básicos
         u.setNombre(req.getNombre());
         u.setApellido(req.getApellido());
         u.setTelefono(req.getTelefono());
+
+        // Actualizar email si viene en el request
+        if (req.getEmail() != null && !req.getEmail().isBlank()) {
+
+            // (opcional) Validar que no esté usado por otro usuario
+            boolean emailEnUso = userRepository.existsByEmail(req.getEmail())
+                    && !req.getEmail().equalsIgnoreCase(u.getEmail());
+
+            if (emailEnUso) {
+                return ResponseEntity.badRequest().body(
+                        Map.of("message", "El correo ya está registrado en otro usuario")
+                );
+            }
+
+            u.setEmail(req.getEmail());
+        }
+
+        // Actualizar enabled si viene en el request
+        if (req.getEnabled() != null) {
+            u.setEnabled(req.getEnabled());
+        }
 
         // Permitir cambiar contraseña opcionalmente
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
@@ -93,6 +121,7 @@ public class AdminUserController {
         userRepository.save(u);
         return ResponseEntity.ok(u);
     }
+
 
     // ACTIVAR / DESACTIVAR ADMIN (PATCH)
     @PatchMapping("/{id}/enabled")
