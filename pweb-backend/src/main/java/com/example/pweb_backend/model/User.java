@@ -40,6 +40,7 @@ public class User {
     private String numeroCasa;
     private String numeroDepto;
     private String comuna;
+    private String region;
 
     // Contacto
     private String telefono;
