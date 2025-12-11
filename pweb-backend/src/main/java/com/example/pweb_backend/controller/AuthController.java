@@ -99,13 +99,22 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("message", "Credenciales inválidas"));
         }
 
-        return ResponseEntity.ok(Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "nombre", user.getNombre(),
-                "apellido", user.getApellido(),
-                "role", user.getRole()
-        ));
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("id", user.getId());
+        body.put("email", user.getEmail());
+        body.put("nombre", user.getNombre());
+        body.put("apellido", user.getApellido());
+        body.put("role", user.getRole());
+        body.put("enabled", user.getEnabled());
+        body.put("telefono", user.getTelefono());
+        body.put("calle", user.getCalle());
+        body.put("numeroCasa", user.getNumeroCasa());
+        body.put("numeroDepto", user.getNumeroDepto());
+        body.put("comuna", user.getComuna());
+        body.put("region", user.getRegion());
+
+        return ResponseEntity.ok(body);
     }
+
 }
 
