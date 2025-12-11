@@ -1,4 +1,3 @@
-// src/main/java/com/example/pweb_backend/controller/AdminUserController.java
 package com.example.pweb_backend.controller;
 
 import com.example.pweb_backend.dto.AdminUserRequest;
@@ -23,7 +22,8 @@ public class AdminUserController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    // Listar solo usuarios con rol ADMIN
+
+    // LISTAR ADMINS
     @GetMapping
     public List<User> listAdmins() {
         return userRepository.findAll().stream()
@@ -31,12 +31,19 @@ public class AdminUserController {
                 .toList();
     }
 
-    // Crear nuevo ADMIN
+    // CREAR ADMIN
     @PostMapping
     public ResponseEntity<?> createAdmin(@RequestBody AdminUserRequest req) {
+
         if (userRepository.existsByEmail(req.getEmail())) {
             return ResponseEntity.badRequest().body(
                     Map.of("message", "El correo ya está registrado")
+            );
+        }
+
+        if (req.getPassword() == null || req.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("message", "La contraseña es obligatoria para crear un admin")
             );
         }
 
@@ -47,16 +54,9 @@ public class AdminUserController {
         u.setTelefono(req.getTelefono());
         u.setRole("ADMIN");
         u.setEnabled(true);
-
-        if (req.getPassword() == null || req.getPassword().isBlank()) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("message", "La contraseña es obligatoria para crear un admin")
-            );
-        }
-
         u.setPassword(encoder.encode(req.getPassword()));
 
-        // resto de campos opcionales
+        // campos opcionales para tu modelo
         u.setRut(null);
         u.setCalle(null);
         u.setNumeroCasa(null);
@@ -65,22 +65,27 @@ public class AdminUserController {
         u.setFotoPerfilUrl(null);
 
         userRepository.save(u);
-
         return ResponseEntity.ok(u);
     }
 
-    // Actualizar datos básicos de un ADMIN
+    // ACTUALIZAR ADMIN COMPLETO (PUT)
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateAdmin(@PathVariable Long id, @RequestBody AdminUserRequest req) {
+    public ResponseEntity<?> updateAdmin(
+            @PathVariable Long id,
+            @RequestBody AdminUserRequest req
+    ) {
         User u = userRepository.findById(id).orElse(null);
+
         if (u == null || !"ADMIN".equalsIgnoreCase(u.getRole())) {
             return ResponseEntity.notFound().build();
         }
 
+        // Actualizar campos básicos
         u.setNombre(req.getNombre());
         u.setApellido(req.getApellido());
         u.setTelefono(req.getTelefono());
 
+        // Permitir cambiar contraseña opcionalmente
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
             u.setPassword(encoder.encode(req.getPassword()));
         }
@@ -89,13 +94,14 @@ public class AdminUserController {
         return ResponseEntity.ok(u);
     }
 
-    // Desactivar / activar admin (en vez de borrar)
+    // ACTIVAR / DESACTIVAR ADMIN (PATCH)
     @PatchMapping("/{id}/enabled")
     public ResponseEntity<?> toggleEnabled(
             @PathVariable Long id,
             @RequestBody Map<String, Boolean> body
     ) {
         User u = userRepository.findById(id).orElse(null);
+
         if (u == null || !"ADMIN".equalsIgnoreCase(u.getRole())) {
             return ResponseEntity.notFound().build();
         }
@@ -111,4 +117,19 @@ public class AdminUserController {
                 "enabled", u.getEnabled()
         ));
     }
+
+    // 5) ELIMINAR ADMIN
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
+        User u = userRepository.findById(id).orElse(null);
+
+        if (u == null || !"ADMIN".equalsIgnoreCase(u.getRole())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        userRepository.delete(u);
+
+        return ResponseEntity.noContent().build(); // 204 OK sin contenido
+    }
 }
+
