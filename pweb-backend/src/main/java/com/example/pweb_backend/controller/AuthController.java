@@ -3,50 +3,47 @@ package com.example.pweb_backend.controller;
 import com.example.pweb_backend.dto.ClienteRegisterRequest;
 import com.example.pweb_backend.model.User;
 import com.example.pweb_backend.repository.UserRepository;
+import com.example.pweb_backend.security.JwtService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
-@Tag(name = "Auth", description = "Login y Registro con BCrypt")
+@Tag(name = "Auth", description = "Login y Registro con JWT + BCrypt")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
-
-    public AuthController(UserRepository userRepository) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = new BCryptPasswordEncoder();
-    }
+    private final PasswordEncoder passwordEncoder;  // usa el bean de SecurityConfig
+    private final JwtService jwtService;
 
     // ================================
-    //  REGISTRO CLIENTE COMPLETO
+    //  REGISTRO CLIENTE
     // ================================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody ClienteRegisterRequest req) {
 
-        // Validación de campos obligatorios
         if (req.getNombre() == null || req.getApellido() == null ||
                 req.getEmail() == null || req.getPassword() == null ||
                 req.getCalle() == null || req.getNumeroCasa() == null ||
-                req.getComuna() == null || req.getRegion() == null
-        ) {
+                req.getComuna() == null || req.getRegion() == null) {
+
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "Faltan campos obligatorios."));
         }
 
-        // Validar email único
         if (userRepository.existsByEmail(req.getEmail())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "El email ya está registrado."));
         }
 
-        // Crear usuario CLIENTE
         User u = new User();
         u.setNombre(req.getNombre());
         u.setApellido(req.getApellido());
@@ -54,7 +51,6 @@ public class AuthController {
         u.setTelefono(req.getTelefono());
         u.setPassword(passwordEncoder.encode(req.getPassword()));
 
-        // Dirección
         u.setCalle(req.getCalle());
         u.setNumeroCasa(req.getNumeroCasa());
         u.setNumeroDepto(req.getNumeroDepto());
@@ -63,8 +59,6 @@ public class AuthController {
 
         u.setRole("CLIENTE");
         u.setEnabled(true);
-
-        // Campos opcionales
         u.setRut(null);
         u.setFotoPerfilUrl(null);
 
@@ -81,13 +75,13 @@ public class AuthController {
     }
 
     // ================================
-    //  LOGIN (NO CREA USUARIOS)
+    //  LOGIN CON JWT
     // ================================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> req) {
 
         String email = req.get("email");
-        String password = req.get("password");
+        String rawPassword = req.get("password");
 
         User user = userRepository.findByEmail(email).orElse(null);
 
@@ -95,11 +89,15 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("message", "Credenciales inválidas"));
         }
 
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             return ResponseEntity.status(401).body(Map.of("message", "Credenciales inválidas"));
         }
 
-        Map<String, Object> body = new java.util.HashMap<>();
+        // Generar JWT
+        String token = jwtService.generateToken(user.getEmail(), user.getRole());
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("token", token);          // 👈 IMPORTANTE para el front
         body.put("id", user.getId());
         body.put("email", user.getEmail());
         body.put("nombre", user.getNombre());
@@ -115,6 +113,6 @@ public class AuthController {
 
         return ResponseEntity.ok(body);
     }
-
 }
+
 

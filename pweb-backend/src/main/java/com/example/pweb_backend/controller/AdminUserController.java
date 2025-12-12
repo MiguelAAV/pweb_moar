@@ -6,6 +6,7 @@ import com.example.pweb_backend.repository.UserRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,13 +18,11 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @Tag(name = "Admin Users", description = "Gestión de cuentas ADMIN por el SUPER_ADMIN")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")   // 👈 coincide con CustomUserDetailsService
 public class AdminUserController {
-
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-
-    // LISTAR ADMINS
     @GetMapping
     public List<User> listAdmins() {
         return userRepository.findAll().stream()
@@ -31,7 +30,6 @@ public class AdminUserController {
                 .toList();
     }
 
-    // CREAR ADMIN
     @PostMapping
     public ResponseEntity<?> createAdmin(@RequestBody AdminUserRequest req) {
 
@@ -56,7 +54,6 @@ public class AdminUserController {
         u.setEnabled(true);
         u.setPassword(encoder.encode(req.getPassword()));
 
-        // campos opcionales para tu modelo
         u.setRut(null);
         u.setCalle(null);
         u.setNumeroCasa(null);
@@ -68,34 +65,27 @@ public class AdminUserController {
         return ResponseEntity.ok(u);
     }
 
-    // ACTUALIZAR ADMIN COMPLETO (PUT)
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateAdmin(
-            @PathVariable Long id,
-            @RequestBody AdminUserRequest req
-    ) {
+    public ResponseEntity<?> updateAdmin(@PathVariable Long id, @RequestBody AdminUserRequest req) {
+
         User u = userRepository.findById(id).orElse(null);
 
         if (u == null || !"ADMIN".equalsIgnoreCase(u.getRole())) {
             return ResponseEntity.notFound().build();
         }
 
-        // Validación mínima
         if (req.getNombre() == null || req.getApellido() == null) {
             return ResponseEntity.badRequest().body(
                     Map.of("message", "Nombre y apellido son obligatorios")
             );
         }
 
-        // Actualizar campos básicos
         u.setNombre(req.getNombre());
         u.setApellido(req.getApellido());
         u.setTelefono(req.getTelefono());
 
-        // Actualizar email si viene en el request
         if (req.getEmail() != null && !req.getEmail().isBlank()) {
 
-            // (opcional) Validar que no esté usado por otro usuario
             boolean emailEnUso = userRepository.existsByEmail(req.getEmail())
                     && !req.getEmail().equalsIgnoreCase(u.getEmail());
 
@@ -108,12 +98,10 @@ public class AdminUserController {
             u.setEmail(req.getEmail());
         }
 
-        // Actualizar enabled si viene en el request
         if (req.getEnabled() != null) {
             u.setEnabled(req.getEnabled());
         }
 
-        // Permitir cambiar contraseña opcionalmente
         if (req.getPassword() != null && !req.getPassword().isBlank()) {
             u.setPassword(encoder.encode(req.getPassword()));
         }
@@ -122,8 +110,6 @@ public class AdminUserController {
         return ResponseEntity.ok(u);
     }
 
-
-    // ACTIVAR / DESACTIVAR ADMIN (PATCH)
     @PatchMapping("/{id}/enabled")
     public ResponseEntity<?> toggleEnabled(
             @PathVariable Long id,
@@ -147,7 +133,6 @@ public class AdminUserController {
         ));
     }
 
-    // 5) ELIMINAR ADMIN
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
         User u = userRepository.findById(id).orElse(null);
@@ -158,7 +143,8 @@ public class AdminUserController {
 
         userRepository.delete(u);
 
-        return ResponseEntity.noContent().build(); // 204 OK sin contenido
+        return ResponseEntity.noContent().build();
     }
+
 }
 
