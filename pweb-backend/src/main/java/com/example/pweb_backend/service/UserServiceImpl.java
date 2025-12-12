@@ -5,8 +5,9 @@ import com.example.pweb_backend.dto.RegisterRequest;
 import com.example.pweb_backend.dto.UserResponse;
 import com.example.pweb_backend.model.User;
 import com.example.pweb_backend.repository.UserRepository;
+import com.example.pweb_backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,9 +15,8 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-
-    // Encriptador de contraseñas (bcrypt)
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;   // usa el bean de SecurityConfig
+    private final JwtService jwtService;            // mismo servicio JWT
 
     @Override
     public UserResponse register(RegisterRequest request) {
@@ -47,15 +47,18 @@ public class UserServiceImpl implements UserService {
         u.setTelefono(request.getTelefono());
 
         u.setEmail(request.getEmail());
-        u.setPassword(passwordEncoder.encode(request.getPassword())); // guarda hash
+        u.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        u.setRole("CLIENTE");              // todos los registrados son CLIENTE por defecto
-        u.setFotoPerfilUrl(null);          // más adelante podrás permitir que lo edite
+        // Todos los registrados son CLIENTE
+        u.setRole("CLIENTE");
+        u.setFotoPerfilUrl(null);
 
         userRepository.save(u);
 
-        // Por ahora no usamos token real, lo dejamos vacío
-        return toResponse(u, "");
+        // 🔥 Generar JWT real
+        String token = jwtService.generateToken(u.getEmail(), u.getRole());
+
+        return toResponse(u, token);
     }
 
     @Override
@@ -67,10 +70,10 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Credenciales inválidas");
         }
 
-        // TODO: luego aquí generaremos un JWT real
-        String fakeToken = "token-" + u.getId();
+        // 🔥 Ahora sí, JWT real (no "token-1")
+        String token = jwtService.generateToken(u.getEmail(), u.getRole());
 
-        return toResponse(u, fakeToken);
+        return toResponse(u, token);
     }
 
     // ====== Helper privado para mapear User -> UserResponse ======
@@ -92,3 +95,4 @@ public class UserServiceImpl implements UserService {
         return r;
     }
 }
+

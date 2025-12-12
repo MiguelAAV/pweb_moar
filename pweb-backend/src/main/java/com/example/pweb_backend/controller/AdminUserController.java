@@ -18,7 +18,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @Tag(name = "Admin Users", description = "Gestión de cuentas ADMIN por el SUPER_ADMIN")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")   // 👈 coincide con CustomUserDetailsService
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AdminUserController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
